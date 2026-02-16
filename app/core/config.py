@@ -7,5 +7,6 @@ class Settings(BaseSettings):
     environment: str = "dev"  # dev|test|prod
     log_level: str = "INFO"
     api_v1_prefix: str = "/api/v1"
+    database_url: str
 
 settings = Settings()
