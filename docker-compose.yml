@@ -9,6 +9,8 @@ services:
       - db
     volumes:
       - .:/app
+    environment:
+      ENVIRONMENT: test
 
   db:
     image: postgres:16

@@ -8,5 +8,6 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_v1_prefix: str = "/api/v1"
     database_url: str
+    database_url_test: str | None = None
 
 settings = Settings()
