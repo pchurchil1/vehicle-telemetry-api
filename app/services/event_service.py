@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.repositories.event_repo import EventRepository
@@ -12,11 +13,9 @@ class EventService:
         self.ecus = EcuRepository(db)
 
     def create_event(self, data: EventCreate):
-        # Vehicle must exist
         if not self.vehicles.get_by_id(data.vehicle_id):
             raise HTTPException(status_code=404, detail="Vehicle not found")
 
-        # If ecu_id provided, ECU must exist and belong to same vehicle
         if data.ecu_id is not None:
             ecu = self.ecus.get_by_id(data.ecu_id)
             if not ecu:
@@ -30,6 +29,9 @@ class EventService:
         self,
         vehicle_id: int,
         ecu_id: int | None = None,
+        event_type: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
         limit: int = 50,
         offset: int = 0,
     ):
@@ -43,6 +45,19 @@ class EventService:
             if ecu.vehicle_id != vehicle_id:
                 raise HTTPException(status_code=409, detail="ECU does not belong to vehicle")
 
+        if created_after is not None and created_before is not None:
+            if created_after > created_before:
+                raise HTTPException(status_code=400, detail="created_after must be <= created_before")
+
         limit = min(max(limit, 1), 100)
         offset = max(offset, 0)
-        return self.events.list_by_vehicle(vehicle_id, ecu_id=ecu_id, limit=limit, offset=offset)
+
+        return self.events.list_by_vehicle(
+            vehicle_id=vehicle_id,
+            ecu_id=ecu_id,
+            event_type=event_type,
+            created_after=created_after,
+            created_before=created_before,
+            limit=limit,
+            offset=offset,
+        )

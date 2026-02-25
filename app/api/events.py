@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.db import get_db
@@ -14,6 +15,9 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
 def list_events_for_vehicle(
     vehicle_id: int,
     ecu_id: int | None = Query(None),
+    event_type: str | None = Query(None),
+    created_after: datetime | None = Query(None),
+    created_before: datetime | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -21,6 +25,9 @@ def list_events_for_vehicle(
     return EventService(db).list_events_for_vehicle(
         vehicle_id=vehicle_id,
         ecu_id=ecu_id,
+        event_type=event_type,
+        created_after=created_after,
+        created_before=created_before,
         limit=limit,
         offset=offset,
     )

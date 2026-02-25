@@ -1,3 +1,4 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models.event import Event
 from app.schemas.event import EventCreate
@@ -13,12 +14,25 @@ class EventRepository:
         self,
         vehicle_id: int,
         ecu_id: int | None = None,
+        event_type: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Event]:
         q = self.db.query(Event).filter(Event.vehicle_id == vehicle_id)
+
         if ecu_id is not None:
             q = q.filter(Event.ecu_id == ecu_id)
+
+        if event_type is not None:
+            q = q.filter(Event.event_type == event_type)
+
+        if created_after is not None:
+            q = q.filter(Event.created_at >= created_after)
+
+        if created_before is not None:
+            q = q.filter(Event.created_at <= created_before)
 
         return (
             q.order_by(Event.created_at.desc(), Event.id.desc())

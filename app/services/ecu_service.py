@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.repositories.ecu_repo import EcuRepository
 from app.repositories.vehicle_repo import VehicleRepository
 from app.schemas.ecu import EcuCreate
@@ -12,7 +13,11 @@ class EcuService:
     def create_ecu(self, data: EcuCreate):
         if not self.vehicles.get_by_id(data.vehicle_id):
             raise HTTPException(status_code=404, detail="Vehicle not found")
-        return self.ecus.create(data)
+
+        try:
+            return self.ecus.create(data)
+        except IntegrityError:
+            raise HTTPException(status_code=409, detail="ECU name already exists for vehicle")
 
     def get_ecu(self, ecu_id: int):
         ecu = self.ecus.get_by_id(ecu_id)

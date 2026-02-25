@@ -1,9 +1,12 @@
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.db import Base
 
 class Ecu(Base):
     __tablename__ = "ecus"
+    __table_args__ = (
+        UniqueConstraint("vehicle_id", "name", name="uq_ecu_vehicle_name"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id"), index=True, nullable=False)

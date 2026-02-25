@@ -35,3 +35,16 @@ def test_create_ecu_vehicle_not_found_404():
     ecu_payload = {"vehicle_id": 9999999, "name": "TCM", "supplier": "Continental"}
     r = client.post("/api/v1/ecus", json=ecu_payload)
     assert r.status_code == 404
+
+def test_duplicate_ecu_name_same_vehicle_returns_409():
+    v = {"vin": _new_vin(), "make": "Ford", "model": "Edge", "year": 2021}
+    rv = client.post("/api/v1/vehicles", json=v)
+    assert rv.status_code == 201
+    vehicle_id = rv.json()["id"]
+
+    ecu_payload = {"vehicle_id": vehicle_id, "name": "ECM", "supplier": "Bosch"}
+    r1 = client.post("/api/v1/ecus", json=ecu_payload)
+    assert r1.status_code == 201
+
+    r2 = client.post("/api/v1/ecus", json=ecu_payload)
+    assert r2.status_code == 409
