@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.models.ecu import Ecu
 from app.schemas.ecu import EcuCreate
 
@@ -17,6 +18,14 @@ class EcuRepository:
             .offset(offset)
             .limit(limit)
             .all()
+        )
+
+    def count_by_vehicle(self, vehicle_id: int) -> int:
+        return (
+            self.db.query(func.count(Ecu.id))
+            .filter(Ecu.vehicle_id == vehicle_id)
+            .scalar()
+            or 0
         )
 
     def create(self, data: EcuCreate) -> Ecu:

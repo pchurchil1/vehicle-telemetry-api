@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.repositories.event_repo import EventRepository
 from app.repositories.vehicle_repo import VehicleRepository
 from app.repositories.ecu_repo import EcuRepository
-from app.schemas.event import EventCreate
+from app.schemas.event import EventCreate, TelemetrySummaryOut
 
 class EventService:
     def __init__(self, db: Session):
@@ -24,6 +24,12 @@ class EventService:
                 raise HTTPException(status_code=409, detail="ECU does not belong to vehicle")
 
         return self.events.create(data)
+
+    def get_event(self, event_id: int):
+        event = self.events.get_by_id(event_id)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return event
 
     def list_events_for_vehicle(
         self,
@@ -60,4 +66,16 @@ class EventService:
             created_before=created_before,
             limit=limit,
             offset=offset,
+        )
+
+    def summarize_vehicle_telemetry(self, vehicle_id: int) -> TelemetrySummaryOut:
+        if not self.vehicles.get_by_id(vehicle_id):
+            raise HTTPException(status_code=404, detail="Vehicle not found")
+
+        return TelemetrySummaryOut(
+            vehicle_id=vehicle_id,
+            ecu_count=self.ecus.count_by_vehicle(vehicle_id),
+            event_count=self.events.count_by_vehicle(vehicle_id),
+            last_event_at=self.events.latest_created_at_by_vehicle(vehicle_id),
+            event_counts_by_type=self.events.count_by_type_for_vehicle(vehicle_id),
         )

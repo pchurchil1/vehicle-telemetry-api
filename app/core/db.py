@@ -9,7 +9,6 @@ if settings.environment == "test" and settings.database_url_test:
 
 engine = create_engine(db_url, pool_pre_ping=True)
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):

@@ -2,7 +2,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-from app.schemas.event import EventCreate, EventOut
+from app.schemas.event import EventCreate, EventOut, TelemetrySummaryOut
 from app.services.event_service import EventService
 
 router = APIRouter()
@@ -10,6 +10,10 @@ router = APIRouter()
 @router.post("/events", response_model=EventOut, status_code=201)
 def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     return EventService(db).create_event(payload)
+
+@router.get("/events/{event_id}", response_model=EventOut)
+def get_event(event_id: int, db: Session = Depends(get_db)):
+    return EventService(db).get_event(event_id)
 
 @router.get("/vehicles/{vehicle_id}/events", response_model=list[EventOut])
 def list_events_for_vehicle(
@@ -31,3 +35,7 @@ def list_events_for_vehicle(
         limit=limit,
         offset=offset,
     )
+
+@router.get("/vehicles/{vehicle_id}/telemetry/summary", response_model=TelemetrySummaryOut)
+def summarize_vehicle_telemetry(vehicle_id: int, db: Session = Depends(get_db)):
+    return EventService(db).summarize_vehicle_telemetry(vehicle_id)

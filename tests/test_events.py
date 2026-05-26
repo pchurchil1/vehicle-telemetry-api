@@ -41,6 +41,44 @@ def test_create_and_list_events():
     assert r3.status_code == 200
     assert all(e["ecu_id"] == ecu_id for e in r3.json())
 
+def test_get_event_by_id():
+    vehicle_id = _create_vehicle()
+    ev = {"vehicle_id": vehicle_id, "ecu_id": None, "event_type": "INFO", "payload": "boot"}
+    created = client.post("/api/v1/events", json=ev)
+    assert created.status_code == 201
+    event_id = created.json()["id"]
+
+    fetched = client.get(f"/api/v1/events/{event_id}")
+    assert fetched.status_code == 200
+    assert fetched.json()["id"] == event_id
+
+def test_get_event_not_found_404():
+    r = client.get("/api/v1/events/9999999")
+    assert r.status_code == 404
+
+def test_vehicle_telemetry_summary():
+    vehicle_id = _create_vehicle()
+    ecu_id = _create_ecu(vehicle_id)
+
+    dtc = {"vehicle_id": vehicle_id, "ecu_id": ecu_id, "event_type": "DTC", "payload": "P0300"}
+    info = {"vehicle_id": vehicle_id, "ecu_id": None, "event_type": "INFO", "payload": "boot"}
+    assert client.post("/api/v1/events", json=dtc).status_code == 201
+    assert client.post("/api/v1/events", json=dtc).status_code == 201
+    assert client.post("/api/v1/events", json=info).status_code == 201
+
+    r = client.get(f"/api/v1/vehicles/{vehicle_id}/telemetry/summary")
+    assert r.status_code == 200
+    summary = r.json()
+    assert summary["vehicle_id"] == vehicle_id
+    assert summary["ecu_count"] == 1
+    assert summary["event_count"] == 3
+    assert summary["last_event_at"] is not None
+    assert summary["event_counts_by_type"] == {"DTC": 2, "INFO": 1}
+
+def test_vehicle_telemetry_summary_vehicle_not_found_404():
+    r = client.get("/api/v1/vehicles/9999999/telemetry/summary")
+    assert r.status_code == 404
+
 def test_event_vehicle_not_found_404():
     ev = {"vehicle_id": 9999999, "ecu_id": None, "event_type": "INFO", "payload": "hello"}
     r = client.post("/api/v1/events", json=ev)

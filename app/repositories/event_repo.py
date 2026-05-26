@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.event import Event
 from app.schemas.event import EventCreate
@@ -9,6 +10,31 @@ class EventRepository:
 
     def get_by_id(self, event_id: int) -> Event | None:
         return self.db.get(Event, event_id)
+
+    def count_by_vehicle(self, vehicle_id: int) -> int:
+        return (
+            self.db.query(func.count(Event.id))
+            .filter(Event.vehicle_id == vehicle_id)
+            .scalar()
+            or 0
+        )
+
+    def latest_created_at_by_vehicle(self, vehicle_id: int) -> datetime | None:
+        return (
+            self.db.query(func.max(Event.created_at))
+            .filter(Event.vehicle_id == vehicle_id)
+            .scalar()
+        )
+
+    def count_by_type_for_vehicle(self, vehicle_id: int) -> dict[str, int]:
+        rows = (
+            self.db.query(Event.event_type, func.count(Event.id))
+            .filter(Event.vehicle_id == vehicle_id)
+            .group_by(Event.event_type)
+            .order_by(Event.event_type.asc())
+            .all()
+        )
+        return {event_type: count for event_type, count in rows}
 
     def list_by_vehicle(
         self,
