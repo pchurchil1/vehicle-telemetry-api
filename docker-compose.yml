@@ -10,7 +10,7 @@ services:
     volumes:
       - .:/app
     environment:
-      ENVIRONMENT: test
+      ENVIRONMENT: dev
 
   db:
     image: postgres:16

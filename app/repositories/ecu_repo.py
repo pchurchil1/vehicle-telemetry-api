@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.ecu import Ecu
-from app.schemas.ecu import EcuCreate
+from app.schemas.ecu import EcuCreate, EcuUpdate
 
 class EcuRepository:
     def __init__(self, db: Session):
@@ -34,3 +34,14 @@ class EcuRepository:
         self.db.commit()
         self.db.refresh(ecu)
         return ecu
+
+    def update(self, ecu: Ecu, data: EcuUpdate) -> Ecu:
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(ecu, field, value)
+        self.db.commit()
+        self.db.refresh(ecu)
+        return ecu
+
+    def delete(self, ecu: Ecu) -> None:
+        self.db.delete(ecu)
+        self.db.commit()

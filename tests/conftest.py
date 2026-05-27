@@ -1,14 +1,17 @@
 import os
+import tempfile
 from pathlib import Path
 
 
-TEST_DB_PATH = Path("/private/tmp/vehicle_telemetry_api_test.db")
+TEST_DB_PATH = Path(tempfile.gettempdir()) / "vehicle_telemetry_api_test.db"
 
 if TEST_DB_PATH.exists():
     TEST_DB_PATH.unlink()
 
-os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB_PATH}")
-os.environ.setdefault("ENVIRONMENT", "test")
+test_database_url = f"sqlite:///{TEST_DB_PATH}"
+os.environ["DATABASE_URL"] = test_database_url
+os.environ["DATABASE_URL_TEST"] = test_database_url
+os.environ["ENVIRONMENT"] = "test"
 
 from app.core.db import Base
 from app.models.ecu import Ecu

@@ -31,6 +31,27 @@ def test_create_get_list_ecu():
     assert r3.status_code == 200
     assert any(e["id"] == ecu_id for e in r3.json())
 
+def test_update_delete_ecu():
+    v = {"vin": _new_vin(), "make": "Ford", "model": "Escape", "year": 2022}
+    rv = client.post("/api/v1/vehicles", json=v)
+    assert rv.status_code == 201
+    vehicle_id = rv.json()["id"]
+
+    created = client.post("/api/v1/ecus", json={"vehicle_id": vehicle_id, "name": "ECM", "supplier": "Bosch"})
+    assert created.status_code == 201
+    ecu_id = created.json()["id"]
+
+    updated = client.patch(f"/api/v1/ecus/{ecu_id}", json={"name": "PCM", "supplier": "Denso"})
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "PCM"
+    assert updated.json()["supplier"] == "Denso"
+
+    deleted = client.delete(f"/api/v1/ecus/{ecu_id}")
+    assert deleted.status_code == 204
+
+    missing = client.get(f"/api/v1/ecus/{ecu_id}")
+    assert missing.status_code == 404
+
 def test_create_ecu_vehicle_not_found_404():
     ecu_payload = {"vehicle_id": 9999999, "name": "TCM", "supplier": "Continental"}
     r = client.post("/api/v1/ecus", json=ecu_payload)

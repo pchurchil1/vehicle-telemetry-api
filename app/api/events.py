@@ -1,15 +1,20 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from app.core.auth import require_api_key
 from app.core.db import get_db
-from app.schemas.event import EventCreate, EventOut, TelemetrySummaryOut
+from app.schemas.event import EventBatchCreate, EventBatchOut, EventCreate, EventOut, TelemetrySummaryOut
 from app.services.event_service import EventService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 @router.post("/events", response_model=EventOut, status_code=201)
 def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     return EventService(db).create_event(payload)
+
+@router.post("/events/batch", response_model=EventBatchOut, status_code=207)
+def create_events_batch(payload: EventBatchCreate, db: Session = Depends(get_db)):
+    return EventService(db).create_events_batch(payload)
 
 @router.get("/events/{event_id}", response_model=EventOut)
 def get_event(event_id: int, db: Session = Depends(get_db)):

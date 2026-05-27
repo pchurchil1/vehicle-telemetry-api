@@ -1,10 +1,11 @@
 from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from app.core.errors import error_payload
 from app.repositories.event_repo import EventRepository
 from app.repositories.vehicle_repo import VehicleRepository
 from app.repositories.ecu_repo import EcuRepository
-from app.schemas.event import EventCreate, TelemetrySummaryOut
+from app.schemas.event import EventBatchCreate, EventBatchOut, EventBatchRejected, EventCreate, TelemetrySummaryOut
 
 class EventService:
     def __init__(self, db: Session):
@@ -24,6 +25,32 @@ class EventService:
                 raise HTTPException(status_code=409, detail="ECU does not belong to vehicle")
 
         return self.events.create(data)
+
+    def create_events_batch(self, data: EventBatchCreate) -> EventBatchOut:
+        accepted = []
+        rejected = []
+
+        for index, event_data in enumerate(data.events):
+            try:
+                accepted.append(self.create_event(event_data))
+            except HTTPException as exc:
+                message = str(exc.detail)
+                payload = error_payload(exc.status_code, message)
+                rejected.append(
+                    EventBatchRejected(
+                        index=index,
+                        status_code=exc.status_code,
+                        error=payload["error"],
+                        message=message,
+                    )
+                )
+
+        return EventBatchOut(
+            accepted_count=len(accepted),
+            rejected_count=len(rejected),
+            events=accepted,
+            rejected=rejected,
+        )
 
     def get_event(self, event_id: int):
         event = self.events.get_by_id(event_id)

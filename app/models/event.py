@@ -1,4 +1,5 @@
-from sqlalchemy import String, ForeignKey, DateTime, func, Index
+from sqlalchemy import JSON, String, ForeignKey, DateTime, func, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.db import Base
 
@@ -15,7 +16,7 @@ class Event(Base):
     ecu_id: Mapped[int] = mapped_column(ForeignKey("ecus.id"), index=True, nullable=True)
 
     event_type: Mapped[str] = mapped_column(String(80), nullable=False)
-    payload: Mapped[str] = mapped_column(String(2000), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     vehicle = relationship("Vehicle", back_populates="events")

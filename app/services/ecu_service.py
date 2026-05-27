@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.repositories.ecu_repo import EcuRepository
 from app.repositories.vehicle_repo import VehicleRepository
-from app.schemas.ecu import EcuCreate
+from app.schemas.ecu import EcuCreate, EcuUpdate
 
 class EcuService:
     def __init__(self, db: Session):
@@ -24,6 +24,18 @@ class EcuService:
         if not ecu:
             raise HTTPException(status_code=404, detail="ECU not found")
         return ecu
+
+    def update_ecu(self, ecu_id: int, data: EcuUpdate):
+        ecu = self.get_ecu(ecu_id)
+        try:
+            return self.ecus.update(ecu, data)
+        except IntegrityError:
+            raise HTTPException(status_code=409, detail="ECU name already exists for vehicle")
+
+    def delete_ecu(self, ecu_id: int):
+        ecu = self.get_ecu(ecu_id)
+        self.ecus.delete(ecu)
+        return None
 
     def list_ecus_for_vehicle(self, vehicle_id: int, limit: int = 50, offset: int = 0):
         if not self.vehicles.get_by_id(vehicle_id):

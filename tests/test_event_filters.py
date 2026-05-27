@@ -21,7 +21,7 @@ def test_event_type_filter_and_date_range():
 
     # Create two events with different types
     r1 = client.post("/api/v1/events", json={
-        "vehicle_id": vehicle_id, "ecu_id": None, "event_type": "DTC", "payload": "P0300"
+        "vehicle_id": vehicle_id, "ecu_id": None, "event_type": "DTC", "payload": {"code": "P0300"}
     })
     assert r1.status_code == 201
 
@@ -29,7 +29,7 @@ def test_event_type_filter_and_date_range():
     time.sleep(0.05)
 
     r2 = client.post("/api/v1/events", json={
-        "vehicle_id": vehicle_id, "ecu_id": None, "event_type": "INFO", "payload": "boot"
+        "vehicle_id": vehicle_id, "ecu_id": None, "event_type": "INFO", "payload": {"message": "boot"}
     })
     assert r2.status_code == 201
 
