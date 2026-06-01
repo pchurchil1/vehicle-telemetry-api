@@ -19,11 +19,13 @@ Implemented:
 - Health and database health checks
 - Vehicle create, get, update, delete, filtered search, and paginated list endpoints
 - ECU create, get, update, delete, and paginated vehicle-scoped list endpoints
+- Signal create, get, update, delete, and vehicle-scoped list endpoints
 - Event ingestion, batch ingestion, detail lookup, vehicle-scoped querying, and filtering by ECU, event type, and created-at range
 - Structured JSON telemetry payloads backed by PostgreSQL JSONB
+- Background event ingestion with persisted ingestion job status
 - Vehicle telemetry summary with ECU count, event count, latest event timestamp, and event counts by type
 - Consistent JSON error responses
-- Optional API key authentication with `X-API-Key`
+- JWT authentication with `admin`, `engineer`, and `viewer` roles
 - SQLAlchemy models, repository/service layering, and Alembic migrations for telemetry tables, constraints, and indexes
 
 ## Local Development
@@ -64,6 +66,12 @@ Or:
 make test
 ```
 
+Run the opt-in PostgreSQL integration test marker inside Docker:
+
+```bash
+make test-postgres
+```
+
 ## API Examples
 
 Create a vehicle:
@@ -90,6 +98,28 @@ curl -X POST http://localhost:8000/api/v1/events/batch \
   -d '{"events":[{"vehicle_id":1,"ecu_id":null,"event_type":"INFO","payload":{"message":"boot"}},{"vehicle_id":1,"ecu_id":null,"event_type":"DTC","payload":{"code":"U0100"}}]}'
 ```
 
+Queue background event ingestion:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/ingestion/events \
+  -H "Content-Type: application/json" \
+  -d '{"events":[{"vehicle_id":1,"ecu_id":null,"signal_id":null,"event_type":"INFO","payload":{"message":"boot"}}]}'
+```
+
+Check an ingestion job:
+
+```bash
+curl http://localhost:8000/api/v1/ingestion/jobs/1
+```
+
+Create a signal:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/signals \
+  -H "Content-Type: application/json" \
+  -d '{"vehicle_id":1,"ecu_id":1,"name":"engine_rpm","unit":"rpm","data_type":"integer","description":"Engine speed"}'
+```
+
 Filter vehicles:
 
 ```bash
@@ -102,17 +132,40 @@ View telemetry summary:
 curl http://localhost:8000/api/v1/vehicles/1/telemetry/summary
 ```
 
-## Optional API Key
+## JWT Auth And Roles
 
-Set `API_KEY` in `.env` to require `X-API-Key` on vehicle, ECU, and event endpoints:
+Set `AUTH_ENABLED=true` and a strong `JWT_SECRET_KEY` in `.env` to require bearer tokens on vehicle, ECU, signal, event, ingestion, and user endpoints:
 
 ```bash
-API_KEY=dev-secret
+AUTH_ENABLED=true
+JWT_SECRET_KEY=replace-with-a-long-random-secret
 ```
 
-Then call endpoints with:
+Bootstrap the first admin user:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/bootstrap \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password123","role":"admin"}'
+```
+
+Log in:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password123"}'
+```
+
+Use the returned token:
 
 ```bash
 curl http://localhost:8000/api/v1/vehicles \
-  -H "X-API-Key: dev-secret"
+  -H "Authorization: Bearer <token>"
 ```
+
+Roles:
+
+- `admin`: full access, including deletes and user creation
+- `engineer`: create/update ingestion resources, no deletes or user admin
+- `viewer`: read-only access

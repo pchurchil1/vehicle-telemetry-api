@@ -5,6 +5,7 @@ from datetime import datetime
 class EventCreate(BaseModel):
     vehicle_id: int = Field(json_schema_extra={"example": 1})
     ecu_id: int | None = Field(default=None, json_schema_extra={"example": 1})
+    signal_id: int | None = Field(default=None, json_schema_extra={"example": 1})
     event_type: str = Field(
         min_length=1,
         max_length=80,
@@ -25,6 +26,7 @@ class EventOut(BaseModel):
     id: int
     vehicle_id: int
     ecu_id: int | None
+    signal_id: int | None
     event_type: str
     payload: dict[str, Any]
     created_at: datetime

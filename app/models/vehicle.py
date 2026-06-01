@@ -13,3 +13,4 @@ class Vehicle(Base):
 
     ecus = relationship("Ecu", back_populates="vehicle", cascade="all, delete-orphan")
     events = relationship("Event", back_populates="vehicle", cascade="all, delete-orphan")
+    signals = relationship("Signal", back_populates="vehicle", cascade="all, delete-orphan")

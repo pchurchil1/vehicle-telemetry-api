@@ -5,6 +5,7 @@ from app.core.errors import error_payload
 from app.repositories.event_repo import EventRepository
 from app.repositories.vehicle_repo import VehicleRepository
 from app.repositories.ecu_repo import EcuRepository
+from app.repositories.signal_repo import SignalRepository
 from app.schemas.event import EventBatchCreate, EventBatchOut, EventBatchRejected, EventCreate, TelemetrySummaryOut
 
 class EventService:
@@ -12,6 +13,7 @@ class EventService:
         self.events = EventRepository(db)
         self.vehicles = VehicleRepository(db)
         self.ecus = EcuRepository(db)
+        self.signals = SignalRepository(db)
 
     def create_event(self, data: EventCreate):
         if not self.vehicles.get_by_id(data.vehicle_id):
@@ -23,6 +25,15 @@ class EventService:
                 raise HTTPException(status_code=404, detail="ECU not found")
             if ecu.vehicle_id != data.vehicle_id:
                 raise HTTPException(status_code=409, detail="ECU does not belong to vehicle")
+
+        if data.signal_id is not None:
+            signal = self.signals.get_by_id(data.signal_id)
+            if not signal:
+                raise HTTPException(status_code=404, detail="Signal not found")
+            if signal.vehicle_id != data.vehicle_id:
+                raise HTTPException(status_code=409, detail="Signal does not belong to vehicle")
+            if data.ecu_id is not None and signal.ecu_id is not None and signal.ecu_id != data.ecu_id:
+                raise HTTPException(status_code=409, detail="Signal does not belong to ECU")
 
         return self.events.create(data)
 
@@ -62,6 +73,7 @@ class EventService:
         self,
         vehicle_id: int,
         ecu_id: int | None = None,
+        signal_id: int | None = None,
         event_type: str | None = None,
         created_after: datetime | None = None,
         created_before: datetime | None = None,
@@ -78,6 +90,13 @@ class EventService:
             if ecu.vehicle_id != vehicle_id:
                 raise HTTPException(status_code=409, detail="ECU does not belong to vehicle")
 
+        if signal_id is not None:
+            signal = self.signals.get_by_id(signal_id)
+            if not signal:
+                raise HTTPException(status_code=404, detail="Signal not found")
+            if signal.vehicle_id != vehicle_id:
+                raise HTTPException(status_code=409, detail="Signal does not belong to vehicle")
+
         if created_after is not None and created_before is not None:
             if created_after > created_before:
                 raise HTTPException(status_code=400, detail="created_after must be <= created_before")
@@ -88,6 +107,7 @@ class EventService:
         return self.events.list_by_vehicle(
             vehicle_id=vehicle_id,
             ecu_id=ecu_id,
+            signal_id=signal_id,
             event_type=event_type,
             created_after=created_after,
             created_before=created_before,

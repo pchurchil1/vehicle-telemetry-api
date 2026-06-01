@@ -40,6 +40,7 @@ class EventRepository:
         self,
         vehicle_id: int,
         ecu_id: int | None = None,
+        signal_id: int | None = None,
         event_type: str | None = None,
         created_after: datetime | None = None,
         created_before: datetime | None = None,
@@ -50,6 +51,9 @@ class EventRepository:
 
         if ecu_id is not None:
             q = q.filter(Event.ecu_id == ecu_id)
+
+        if signal_id is not None:
+            q = q.filter(Event.signal_id == signal_id)
 
         if event_type is not None:
             q = q.filter(Event.event_type == event_type)

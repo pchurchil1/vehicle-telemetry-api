@@ -1,13 +1,19 @@
 from fastapi import APIRouter
 from app.api.health import router as health_router
 from app.api.db_health import router as db_health_router
+from app.api.auth import router as auth_router
 from app.api.vehicles import router as vehicles_router
 from app.api.ecus import router as ecus_router
+from app.api.signals import router as signals_router
 from app.api.events import router as events_router
+from app.api.ingestion import router as ingestion_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(db_health_router, tags=["db"])
+api_router.include_router(auth_router, tags=["auth"])
 api_router.include_router(vehicles_router, tags=["vehicles"])
 api_router.include_router(ecus_router, tags=["ecus"])
+api_router.include_router(signals_router, tags=["signals"])
 api_router.include_router(events_router, tags=["events"])
+api_router.include_router(ingestion_router, tags=["ingestion"])

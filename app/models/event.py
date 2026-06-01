@@ -14,6 +14,7 @@ class Event(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id"), index=True, nullable=False)
     ecu_id: Mapped[int] = mapped_column(ForeignKey("ecus.id"), index=True, nullable=True)
+    signal_id: Mapped[int | None] = mapped_column(ForeignKey("signals.id", ondelete="SET NULL"), index=True, nullable=True)
 
     event_type: Mapped[str] = mapped_column(String(80), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False)
@@ -21,3 +22,4 @@ class Event(Base):
 
     vehicle = relationship("Vehicle", back_populates="events")
     ecu = relationship("Ecu", back_populates="events")
+    signal = relationship("Signal", back_populates="events")

@@ -1,29 +1,48 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from app.core.auth import require_api_key
 from app.core.db import get_db
+from app.core.security import ROLE_ADMIN, ROLE_ENGINEER, ROLE_VIEWER, require_roles
 from app.schemas.event import EventBatchCreate, EventBatchOut, EventCreate, EventOut, TelemetrySummaryOut
 from app.services.event_service import EventService
 
-router = APIRouter(dependencies=[Depends(require_api_key)])
+router = APIRouter()
 
-@router.post("/events", response_model=EventOut, status_code=201)
+@router.post(
+    "/events",
+    response_model=EventOut,
+    status_code=201,
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER))],
+)
 def create_event(payload: EventCreate, db: Session = Depends(get_db)):
     return EventService(db).create_event(payload)
 
-@router.post("/events/batch", response_model=EventBatchOut, status_code=207)
+@router.post(
+    "/events/batch",
+    response_model=EventBatchOut,
+    status_code=207,
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER))],
+)
 def create_events_batch(payload: EventBatchCreate, db: Session = Depends(get_db)):
     return EventService(db).create_events_batch(payload)
 
-@router.get("/events/{event_id}", response_model=EventOut)
+@router.get(
+    "/events/{event_id}",
+    response_model=EventOut,
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER, ROLE_VIEWER))],
+)
 def get_event(event_id: int, db: Session = Depends(get_db)):
     return EventService(db).get_event(event_id)
 
-@router.get("/vehicles/{vehicle_id}/events", response_model=list[EventOut])
+@router.get(
+    "/vehicles/{vehicle_id}/events",
+    response_model=list[EventOut],
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER, ROLE_VIEWER))],
+)
 def list_events_for_vehicle(
     vehicle_id: int,
     ecu_id: int | None = Query(None),
+    signal_id: int | None = Query(None),
     event_type: str | None = Query(None),
     created_after: datetime | None = Query(None),
     created_before: datetime | None = Query(None),
@@ -34,6 +53,7 @@ def list_events_for_vehicle(
     return EventService(db).list_events_for_vehicle(
         vehicle_id=vehicle_id,
         ecu_id=ecu_id,
+        signal_id=signal_id,
         event_type=event_type,
         created_after=created_after,
         created_before=created_before,
@@ -41,6 +61,10 @@ def list_events_for_vehicle(
         offset=offset,
     )
 
-@router.get("/vehicles/{vehicle_id}/telemetry/summary", response_model=TelemetrySummaryOut)
+@router.get(
+    "/vehicles/{vehicle_id}/telemetry/summary",
+    response_model=TelemetrySummaryOut,
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER, ROLE_VIEWER))],
+)
 def summarize_vehicle_telemetry(vehicle_id: int, db: Session = Depends(get_db)):
     return EventService(db).summarize_vehicle_telemetry(vehicle_id)

@@ -7,7 +7,10 @@ class Settings(BaseSettings):
     environment: str = "dev"  # dev|test|prod
     log_level: str = "INFO"
     api_v1_prefix: str = "/api/v1"
-    api_key: str | None = None
+    auth_enabled: bool = False
+    jwt_secret_key: str = "dev-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_expires_minutes: int = 60
     database_url: str
     database_url_test: str | None = None
 

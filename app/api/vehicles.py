@@ -1,30 +1,51 @@
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
-from app.core.auth import require_api_key
 from app.core.db import get_db
+from app.core.security import ROLE_ADMIN, ROLE_ENGINEER, ROLE_VIEWER, require_roles
 from app.schemas.vehicle import VehicleCreate, VehicleOut, VehicleUpdate
 from app.services.vehicle_service import VehicleService
 
-router = APIRouter(dependencies=[Depends(require_api_key)])
+router = APIRouter()
 
-@router.post("/vehicles", response_model=VehicleOut, status_code=201)
+@router.post(
+    "/vehicles",
+    response_model=VehicleOut,
+    status_code=201,
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER))],
+)
 def create_vehicle(payload: VehicleCreate, db: Session = Depends(get_db)):
     return VehicleService(db).create_vehicle(payload)
 
-@router.get("/vehicles/{vehicle_id}", response_model=VehicleOut)
+@router.get(
+    "/vehicles/{vehicle_id}",
+    response_model=VehicleOut,
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER, ROLE_VIEWER))],
+)
 def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
     return VehicleService(db).get_vehicle(vehicle_id)
 
-@router.patch("/vehicles/{vehicle_id}", response_model=VehicleOut)
+@router.patch(
+    "/vehicles/{vehicle_id}",
+    response_model=VehicleOut,
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER))],
+)
 def update_vehicle(vehicle_id: int, payload: VehicleUpdate, db: Session = Depends(get_db)):
     return VehicleService(db).update_vehicle(vehicle_id, payload)
 
-@router.delete("/vehicles/{vehicle_id}", status_code=204)
+@router.delete(
+    "/vehicles/{vehicle_id}",
+    status_code=204,
+    dependencies=[Depends(require_roles(ROLE_ADMIN))],
+)
 def delete_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
     VehicleService(db).delete_vehicle(vehicle_id)
     return Response(status_code=204)
 
-@router.get("/vehicles", response_model=list[VehicleOut])
+@router.get(
+    "/vehicles",
+    response_model=list[VehicleOut],
+    dependencies=[Depends(require_roles(ROLE_ADMIN, ROLE_ENGINEER, ROLE_VIEWER))],
+)
 def list_vehicles(
     make: str | None = Query(None, min_length=1, max_length=50),
     model: str | None = Query(None, min_length=1, max_length=50),

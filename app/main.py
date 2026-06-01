@@ -1,15 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.schemas.error import ErrorOut
+from app.services.ingestion_worker import ingestion_worker
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ingestion_worker.start()
+    yield
+
 
 def create_app() -> FastAPI:
     configure_logging(settings.log_level)
 
     app = FastAPI(
         title=settings.app_name,
+        lifespan=lifespan,
         responses={
             401: {"model": ErrorOut},
             404: {"model": ErrorOut},
