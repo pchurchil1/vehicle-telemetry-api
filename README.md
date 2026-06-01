@@ -10,6 +10,23 @@ Design and implement a production-grade telemetry backend similar to what might 
 
 FastAPI · PostgreSQL · Docker · Alembic · Pytest
 
+## Architecture
+
+```mermaid
+flowchart LR
+    client[API Client / Future React Dashboard]
+    api[FastAPI API Container]
+    worker[Ingestion Worker Container]
+    db[(PostgreSQL)]
+
+    client -->|REST / JSON| api
+    api -->|CRUD + auth + queued jobs| db
+    worker -->|poll queued ingestion_jobs| db
+    worker -->|persist accepted/rejected events| db
+```
+
+The API process handles request validation, JWT/RBAC, and synchronous reads/writes. Background ingestion is handled by a separate worker container that polls persisted `ingestion_jobs`, so queued work survives API restarts and does not depend on in-process memory.
+
 ## Status
 
 Phase 1 — core telemetry API
@@ -23,9 +40,11 @@ Implemented:
 - Event ingestion, batch ingestion, detail lookup, vehicle-scoped querying, and filtering by ECU, event type, and created-at range
 - Structured JSON telemetry payloads backed by PostgreSQL JSONB
 - Background event ingestion with persisted ingestion job status
+- Separate worker container/process for queued ingestion jobs
 - Vehicle telemetry summary with ECU count, event count, latest event timestamp, and event counts by type
 - Consistent JSON error responses
 - JWT authentication with `admin`, `engineer`, and `viewer` roles
+- CORS configuration for local React dashboard origins
 - SQLAlchemy models, repository/service layering, and Alembic migrations for telemetry tables, constraints, and indexes
 
 ## Local Development
@@ -54,6 +73,12 @@ Or:
 make migrate
 ```
 
+Load demo seed data:
+
+```bash
+make seed
+```
+
 Run tests:
 
 ```bash
@@ -66,11 +91,15 @@ Or:
 make test
 ```
 
+Coverage is enforced at 70% minimum.
+
 Run the opt-in PostgreSQL integration test marker inside Docker:
 
 ```bash
 make test-postgres
 ```
+
+PostgreSQL is published on `localhost:5433` to avoid collisions with a local Postgres install. Containers still talk to it internally as `db:5432`.
 
 ## API Examples
 
@@ -169,3 +198,18 @@ Roles:
 - `admin`: full access, including deletes and user creation
 - `engineer`: create/update ingestion resources, no deletes or user admin
 - `viewer`: read-only access
+
+## Design Decisions
+
+- **Layered backend:** routes delegate to services, and services delegate persistence to repositories so HTTP concerns do not leak into database code.
+- **DB-backed ingestion queue:** ingestion jobs are persisted in PostgreSQL rather than held in process memory, making work visible and restart-tolerant without adding Redis or a broker yet.
+- **JSONB payloads:** telemetry events carry flexible structured payloads while core entities remain relational for filtering, ownership, and joins.
+- **JWT/RBAC with disabled-by-default local auth:** `AUTH_ENABLED=false` keeps local demos frictionless; enabling auth exercises the same role checks intended for production.
+- **Docker-first workflow:** Compose starts API, worker, and Postgres together; Make targets wrap the common run, migrate, seed, and test commands.
+
+## Future Improvements
+
+- Move the ingestion queue to Redis/Celery or a managed queue when throughput requires horizontal worker scaling.
+- Add metrics endpoints and request/job latency instrumentation.
+- Add richer seed scenarios and demo scripts for interview walkthroughs.
+- Add the React fleet dashboard against the existing versioned API and CORS config.

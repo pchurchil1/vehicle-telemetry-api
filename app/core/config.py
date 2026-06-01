@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "dev-change-me"
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
     database_url: str
     database_url_test: str | None = None
 

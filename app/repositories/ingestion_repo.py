@@ -1,14 +1,15 @@
 from sqlalchemy.orm import Session
 
 from app.models.ingestion_job import IngestionJob
+from app.schemas.ingestion import IngestionJobCreate
 
 
 class IngestionJobRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self) -> IngestionJob:
-        job = IngestionJob(status="queued")
+    def create(self, payload: IngestionJobCreate) -> IngestionJob:
+        job = IngestionJob(status="queued", payload=payload.model_dump(mode="json"))
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
@@ -16,6 +17,15 @@ class IngestionJobRepository:
 
     def get_by_id(self, job_id: int) -> IngestionJob | None:
         return self.db.get(IngestionJob, job_id)
+
+    def get_next_queued(self) -> IngestionJob | None:
+        return (
+            self.db.query(IngestionJob)
+            .filter(IngestionJob.status == "queued")
+            .order_by(IngestionJob.id.asc())
+            .with_for_update(skip_locked=True)
+            .first()
+        )
 
     def update_status(
         self,

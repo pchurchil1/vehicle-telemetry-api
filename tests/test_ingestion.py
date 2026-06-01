@@ -4,6 +4,7 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.ingestion_worker import IngestionWorker
 
 
 client = TestClient(app)
@@ -40,6 +41,8 @@ def test_background_event_ingestion_job_completes():
     )
     assert queued.status_code == 202
     job_id = queued.json()["id"]
+
+    assert IngestionWorker(poll_interval_seconds=0).process_next_job() is True
 
     body = None
     for _ in range(50):

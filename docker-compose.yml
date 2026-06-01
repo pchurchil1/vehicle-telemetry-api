@@ -12,6 +12,18 @@ services:
     environment:
       ENVIRONMENT: dev
 
+  worker:
+    build: .
+    command: ["python", "-m", "app.worker"]
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    environment:
+      ENVIRONMENT: dev
+
   db:
     image: postgres:16
     environment:

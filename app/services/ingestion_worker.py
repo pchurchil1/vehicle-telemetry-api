@@ -1,5 +1,4 @@
-from queue import Queue
-from threading import Lock, Thread
+import time
 
 from app.core.db import SessionLocal
 from app.repositories.ingestion_repo import IngestionJobRepository
@@ -8,47 +7,38 @@ from app.services.event_service import EventService
 
 
 class IngestionWorker:
-    def __init__(self):
-        self.queue: Queue[tuple[int, EventBatchCreate]] = Queue()
-        self._thread: Thread | None = None
-        self._lock = Lock()
+    def __init__(self, poll_interval_seconds: float = 1.0):
+        self.poll_interval_seconds = poll_interval_seconds
 
-    def start(self) -> None:
-        with self._lock:
-            if self._thread and self._thread.is_alive():
-                return
-            self._thread = Thread(target=self._run, name="telemetry-ingestion-worker", daemon=True)
-            self._thread.start()
+    def process_next_job(self) -> bool:
+        db = SessionLocal()
+        try:
+            jobs = IngestionJobRepository(db)
+            job = jobs.get_next_queued()
+            if job is None:
+                return False
 
-    def enqueue(self, job_id: int, payload: EventBatchCreate) -> None:
-        self.start()
-        self.queue.put((job_id, payload))
+            jobs.update_status(job, "processing")
+            payload = EventBatchCreate.model_validate(job.payload)
+            result = EventService(db).create_events_batch(payload)
+            jobs.update_status(
+                job,
+                "completed",
+                accepted_count=result.accepted_count,
+                rejected_count=result.rejected_count,
+            )
+            return True
+        except Exception as exc:
+            db.rollback()
+            if "job" in locals() and job is not None:
+                IngestionJobRepository(db).update_status(job, "failed", error_message=str(exc))
+                return True
+            return False
+        finally:
+            db.close()
 
-    def _run(self) -> None:
+    def run_forever(self) -> None:
         while True:
-            job_id, payload = self.queue.get()
-            db = SessionLocal()
-            try:
-                jobs = IngestionJobRepository(db)
-                job = jobs.get_by_id(job_id)
-                if job is None:
-                    continue
-                jobs.update_status(job, "processing")
-                result = EventService(db).create_events_batch(payload)
-                jobs.update_status(
-                    job,
-                    "completed",
-                    accepted_count=result.accepted_count,
-                    rejected_count=result.rejected_count,
-                )
-            except Exception as exc:
-                db.rollback()
-                job = IngestionJobRepository(db).get_by_id(job_id)
-                if job is not None:
-                    IngestionJobRepository(db).update_status(job, "failed", error_message=str(exc))
-            finally:
-                db.close()
-                self.queue.task_done()
-
-
-ingestion_worker = IngestionWorker()
+            processed = self.process_next_job()
+            if not processed:
+                time.sleep(self.poll_interval_seconds)
